@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <title>Trading Practice Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #eee; margin: 0; padding: 20px; }
+    .box { background: #1d1d1d; padding: 16px; border-radius: 14px; margin-bottom: 16px; }
+    input, select, button { padding: 10px; margin: 5px 0; border-radius: 8px; border: 0; }
+    button { cursor: pointer; font-weight: bold; }
+    .green { color: #4ade80; }
+    .red { color: #f87171; }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+    label { display:block; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <h1>Trading Practice Dashboard</h1>
+
+  <div class="row">
+    <div class="box">
+      <h2>Live BTC Price</h2>
+      <h1 id="price">${{ '%.2f'|format(price) }}</h1>
+      <p>Paper balance: <strong>${{ '%.2f'|format(state.paper_balance) }}</strong></p>
+    </div>
+
+    <div class="box">
+      <h2>Open Position</h2>
+      {% if state.position %}
+        <p>Side: <strong>{{ state.position.side }}</strong></p>
+        <p>Amount: ${{ state.position.amount }}</p>
+        <p>Entry BTC: ${{ '%.2f'|format(state.position.entry_price) }}</p>
+      {% else %}
+        <p>No open position</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>Set Auto Paper Targets</h2>
+    <form method="post" action="/set_targets">
+      <label>Side</label>
+      <select name="side">
+        <option value="UP">UP</option>
+        <option value="DOWN">DOWN</option>
+      </select>
+      <label>Entry target BTC price</label>
+      <input name="entry_target" type="number" step="0.01" required>
+      <label>Exit target BTC price</label>
+      <input name="exit_target" type="number" step="0.01" required>
+      <label>Paper amount in dollars</label>
+      <input name="amount" type="number" step="0.01" value="1" required>
+      <br>
+      <button type="submit">Save Paper Targets</button>
+    </form>
+
+    {% if state.targets %}
+      <p>Current target: <strong>{{ state.targets.side }}</strong>, entry ${{ state.targets.entry_target }}, exit ${{ state.targets.exit_target }}, amount ${{ state.targets.amount }}</p>
+    {% endif %}
+  </div>
+
+  <div class="box">
+    <h2>Manual Paper Trade</h2>
+    <form method="post" action="/manual_buy">
+      <select name="side">
+        <option value="UP">BUY UP</option>
+        <option value="DOWN">BUY DOWN</option>
+      </select>
+      <input name="amount" type="number" step="0.01" value="1">
+      <button type="submit">Manual Paper Buy</button>
+    </form>
+
+    <form method="post" action="/manual_sell">
+      <button type="submit">Manual Paper Sell</button>
+    </form>
+
+    <form method="post" action="/reset">
+      <button type="submit">Reset Paper Account</button>
+    </form>
+  </div>
+
+  <div class="box">
+    <h2>Trade Log</h2>
+    {% for item in state.trade_log %}
+      <p><strong>{{ item.time }}</strong> {{ item.message }}</p>
+    {% endfor %}
+  </div>
+
+<script>
+async function refresh() {
+  try {
+    const res = await fetch('/api/state');
+    const data = await res.json();
+    document.getElementById('price').innerText = '$' + data.price.toFixed(2);
+  } catch (e) {}
+}
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
